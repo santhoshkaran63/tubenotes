@@ -190,7 +190,7 @@ export default function Home() {
                   <SummaryModeSwitcher
                     mode={summaryMode}
                     onChange={handleModeChange}
-                    disabled={summaryState.status === 'loading'}
+                    disabled={['loading'].includes(summaryState.status)}
                   />
                   <button
                     onClick={handleGenerateSummary}
