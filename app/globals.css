@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font-body);
+  background-color: #F2EBDe;
+  color: #2A2825;
+  -webkit-font-smoothing: antialiased;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+}
+
+/* Prevent iOS double-tap zoom on buttons */
+button, input, a {
+  touch-action: manipulation;
+}
+
+/* iOS Safari input fix — prevents zoom on focus */
+input[type="url"],
+input[type="text"],
+input[type="email"] {
+  font-size: 16px !important;
+}
+
+/* Transcript scrollbar (desktop) */
+.transcript-scroll::-webkit-scrollbar       { width: 5px; }
+.transcript-scroll::-webkit-scrollbar-track { background: #ECE2D0; border-radius: 10px; }
+.transcript-scroll::-webkit-scrollbar-thumb { background: #B8D8EC; border-radius: 10px; }
+.transcript-scroll::-webkit-scrollbar-thumb:hover { background: #7BB5D0; }
+
+/* Skeleton shimmer */
+.shimmer {
+  background: linear-gradient(90deg, #ECE2D0 25%, #F4EDE0 50%, #ECE2D0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+
+/* Safe area padding for iPhone notch/home bar */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
