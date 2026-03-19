@@ -1,14 +1,8 @@
 /**
- * Transcript provider — this is the SINGLE place to swap out the transcript
- * fetching library. If you want to replace `youtube-transcript` with another
- * provider (e.g. a paid API, Supadata, AssemblyAI, etc.), update only this file.
- *
- * Public contract:
- *   fetchTranscript(videoId: string): Promise<string>
- *   Throws a TranscriptError with a user-friendly message on failure.
+ * Transcript provider — swap provider here if needed.
+ * Currently uses Supadata API (works from server/Vercel).
+ * Requires: SUPADATA_API_KEY in .env.local
  */
-
-import { YoutubeTranscript } from 'youtube-transcript'
 
 export class TranscriptError extends Error {
   constructor(message: string) {
@@ -17,46 +11,51 @@ export class TranscriptError extends Error {
   }
 }
 
-/**
- * Fetches the full transcript for a YouTube video and returns it as a
- * single, clean string with normal sentence spacing.
- */
 export async function fetchTranscript(videoId: string): Promise<string> {
-  let segments: { text: string }[]
+  const apiKey = process.env.SUPADATA_API_KEY
 
+  if (!apiKey) {
+    throw new TranscriptError('SUPADATA_API_KEY is not set. Add it to your .env.local file.')
+  }
+
+  let response: Response
   try {
-    segments = await YoutubeTranscript.fetchTranscript(videoId)
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message.toLowerCase() : ''
-
-    if (msg.includes('disabled') || msg.includes('no transcript')) {
-      throw new TranscriptError(
-        'No transcript is available for this video. The creator may have disabled captions.'
-      )
-    }
-    if (msg.includes('private') || msg.includes('unavailable')) {
-      throw new TranscriptError(
-        'This video is private or unavailable. Please try a different link.'
-      )
-    }
-
-    throw new TranscriptError(
-      'Could not fetch the transcript. The video may not have captions, or YouTube is temporarily blocking requests.'
+    response = await fetch(
+      `https://api.supadata.ai/v1/youtube/transcript?videoId=${videoId}&text=true`,
+      {
+        headers: {
+          'x-api-key': apiKey,
+        },
+      }
     )
+  } catch {
+    throw new TranscriptError('Could not reach transcript service. Check your internet connection.')
   }
 
-  if (!segments || segments.length === 0) {
-    throw new TranscriptError(
-      'No transcript content was found for this video.'
-    )
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new TranscriptError('No transcript is available for this video. The creator may have disabled captions.')
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new TranscriptError('Invalid Supadata API key. Check SUPADATA_API_KEY in your environment variables.')
+    }
+    throw new TranscriptError('Could not fetch the transcript. The video may be private or unavailable.')
   }
 
-  // Join segments into one clean readable block
-  const text = segments
-    .map((s) => s.text.trim())
-    .filter(Boolean)
-    .join(' ')
-    // Clean up HTML entities that youtube-transcript sometimes returns
+  const data = await response.json()
+
+  // Supadata returns { content: string } when text=true
+  const text: string = typeof data.content === 'string'
+    ? data.content
+    : Array.isArray(data.content)
+      ? data.content.map((s: { text: string }) => s.text).join(' ')
+      : ''
+
+  if (!text.trim()) {
+    throw new TranscriptError('No transcript content was found for this video.')
+  }
+
+  return text
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -64,6 +63,4 @@ export async function fetchTranscript(videoId: string): Promise<string> {
     .replace(/&#39;/g, "'")
     .replace(/\s+/g, ' ')
     .trim()
-
-  return text
 }
